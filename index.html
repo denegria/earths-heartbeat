@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Earth's Heartbeat — Global Intelligence Viewer</title>
+  <meta name="description"
+    content="Real-time 3D globe with live flight tracking, satellite orbits, and military activity visualization" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+  <!-- CesiumJS globe container -->
+  <div id="cesiumContainer"></div>
+
+  <!-- HUD Overlay -->
+  <div id="hud">
+    <!-- Top Bar -->
+    <header id="topBar">
+      <div class="top-left">
+        <div class="logo">
+          <span class="logo-icon">◉</span>
+          <span class="logo-text">EARTH'S HEARTBEAT</span>
+        </div>
+        <span class="status-badge" id="statusBadge">● LIVE</span>
+      </div>
+      <div class="top-center">
+        <span id="utcTime" class="hud-mono"></span>
+      </div>
+      <div class="top-right">
+        <div class="mode-switcher" id="modeSwitcher">
+          <button class="mode-btn active" data-mode="normal" title="Normal (1)">STD</button>
+          <button class="mode-btn" data-mode="nvg" title="Night Vision (2)">NVG</button>
+          <button class="mode-btn" data-mode="flir" title="Thermal (3)">FLIR</button>
+          <button class="mode-btn" data-mode="crt" title="CRT Monitor (4)">CRT</button>
+        </div>
+        <div class="layer-toggles">
+          <button class="layer-btn active" data-layer="flights" title="Toggle flights">✈</button>
+          <button class="layer-btn active" data-layer="military" title="Toggle military">⚔</button>
+          <button class="layer-btn active" data-layer="satellites" title="Toggle satellites">🛰</button>
+          <button class="layer-btn active" data-layer="ships" title="Toggle ships">🚢</button>
+          <button class="layer-btn active" data-layer="events" title="Toggle events">⚠</button>
+          <button class="layer-btn" data-layer="labels" title="Toggle labels">🏷</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Location Indicator (what region/country you're looking at) -->
+    <div id="locationIndicator">
+      <span id="locationIcon">📍</span>
+      <span id="locationName">—</span>
+    </div>
+
+    <!-- Side Panel (entity info) -->
+    <aside id="infoPanel" class="hidden">
+      <div class="panel-header">
+        <span id="panelTitle">ENTITY INFO</span>
+        <button id="panelClose" class="panel-close">✕</button>
+      </div>
+      <div id="panelContent"></div>
+    </aside>
+
+    <!-- Quick Nav — Hotspot Regions -->
+    <div id="quickNav">
+      <div class="qnav-label">HOTSPOTS</div>
+      <button class="qnav-btn" data-lon="35.5" data-lat="33.0" data-alt="800000" title="Middle East">🔥 Middle
+        East</button>
+      <button class="qnav-btn" data-lon="36.0" data-lat="49.0" data-alt="800000" title="Ukraine">⚡ Ukraine</button>
+      <button class="qnav-btn" data-lon="122.0" data-lat="24.0" data-alt="600000" title="Taiwan Strait">🌊 Taiwan
+        Strait</button>
+      <button class="qnav-btn" data-lon="127.0" data-lat="38.5" data-alt="500000" title="Korean Peninsula">🎯
+        Korea</button>
+      <button class="qnav-btn" data-lon="45.0" data-lat="15.0" data-alt="800000" title="Red Sea / Horn of Africa">⛵ Red
+        Sea</button>
+      <button class="qnav-btn" data-lon="68.0" data-lat="34.0" data-alt="600000" title="Afghanistan/Pakistan">🏔
+        AFPAK</button>
+      <button class="qnav-btn" data-lon="80.0" data-lat="10.0" data-alt="2000000" title="South China Sea">🌏 S. China
+        Sea</button>
+      <button class="qnav-btn" data-lon="-66.0" data-lat="8.0" data-alt="500000" title="Venezuela">🛢 Venezuela</button>
+    </div>
+
+    <!-- Stats Bar (bottom-left) -->
+    <div id="statsBar">
+      <div class="stat">
+        <span class="stat-label">FLIGHTS</span>
+        <span class="stat-value" id="flightCount">—</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">MILITARY</span>
+        <span class="stat-value" id="militaryCount">—</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">SATELLITES</span>
+        <span class="stat-value" id="satCount">—</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">EVENTS</span>
+        <span class="stat-value" id="eventCount">—</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">SHIPS</span>
+        <span class="stat-value" id="shipCount">—</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">NATURAL</span>
+        <span class="stat-value" id="naturalCount">—</span>
+      </div>
+    </div>
+
+    <!-- Camera Info (bottom-right) -->
+    <div id="cameraInfo">
+      <span id="camLat">—</span>
+      <span id="camLon">—</span>
+      <span id="camAlt">—</span>
+    </div>
+
+    <!-- Compass Rose -->
+    <div id="compass">
+      <div id="compassRing">
+        <span class="compass-n">N</span>
+        <div id="compassArrow">▲</div>
+      </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div id="searchContainer">
+      <input type="text" id="searchInput" placeholder="Search location… (press /)" autocomplete="off" />
+      <div id="searchResults" class="hidden"></div>
+    </div>
+
+    <!-- Alerts Container -->
+    <div id="alertsContainer"></div>
+
+    <!-- Keyboard Shortcuts Help -->
+    <div id="shortcutsHelp" class="hidden">
+      <div class="shortcuts-header">
+        <span>KEYBOARD SHORTCUTS</span>
+        <button id="shortcutsClose" class="panel-close">✕</button>
+      </div>
+      <div class="shortcuts-grid">
+        <kbd>1</kbd><span>Standard view</span>
+        <kbd>2</kbd><span>Night vision</span>
+        <kbd>3</kbd><span>Thermal/FLIR</span>
+        <kbd>4</kbd><span>CRT monitor</span>
+        <kbd>/</kbd><span>Focus search</span>
+        <kbd>L</kbd><span>Toggle labels</span>
+        <kbd>F</kbd><span>Toggle flights</span>
+        <kbd>M</kbd><span>Toggle military</span>
+        <kbd>S</kbd><span>Toggle satellites</span>
+        <kbd>H</kbd><span>Home view</span>
+        <kbd>?</kbd><span>This help</span>
+        <kbd>Esc</kbd><span>Close panels</span>
+      </div>
+    </div>
+
+    <!-- Timeline (event replay) -->
+    <div id="timeline" class="hidden">
+      <button id="timelineToggle" class="timeline-btn">▶ REPLAY</button>
+      <div id="timelineControls" class="hidden">
+        <button id="playPause" class="tl-btn">▶</button>
+        <input type="range" id="timeSlider" min="0" max="1440" value="1440" step="1" />
+        <span id="timeLabel" class="hud-mono">LIVE</span>
+        <select id="speedSelect">
+          <option value="1">1×</option>
+          <option value="2">2×</option>
+          <option value="4">4×</option>
+          <option value="8">8×</option>
+        </select>
+        <button id="jumpLive" class="tl-btn">⟳ LIVE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Screen -->
+  <div id="loadingScreen">
+    <div class="loader">
+      <div class="pulse-ring"></div>
+      <span class="loader-text">EARTH'S HEARTBEAT</span>
+      <span class="loader-sub" id="loadingStatus">Initializing globe…</span>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>
